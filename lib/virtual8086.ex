@@ -3,12 +3,6 @@ defmodule Virtual8086 do
   Documentation for `Virtual8086`.
   """
 
-  @mov 100010
-
-  @opcode_map %{
-    @mov => "mov"
-  }
-
   @byte_registers %{
     000 => "al",
     001 => "cl",
@@ -32,25 +26,55 @@ defmodule Virtual8086 do
   }
 
   def disassemble(binary_stream) do
-    <<opcode::6, d_field::1, w_field::1, mode::2, register::3, rm::3>> = binary_stream
+    assembly = ["bits 16\n\n"]
 
-    """
-    bits #{bit_size(binary_stream)}
+    do_disassemble(assembly, binary_stream)
+    |> Enum.join()
+  end
 
-    #{instruction(opcode)} #{operands(d_field, w_field, mode, register, rm)}
-    """
+  def do_disassemble(assembly, <<>>), do: assembly
+  def do_disassemble(assembly, binary_stream) do
+    <<instruction::16, rest::binary>> = binary_stream
+
+    decode(<<instruction::16>>)
+    |> append_to_assembly(assembly)
+    |> do_disassemble(rest)
+  end
+
+  def decode(<<34::6, d_field::1, w_field::1, mode::2, register::3, rm::3>>) do
+    "mov #{operands(d_field, w_field, mode, register, rm)}\n"
+  end
+
+  def decode(<<11::4, w_field::1, register::3, data::8>>) do
+    "mov #{operands(w_field, register, data)}\n"
+  end
+
+  def append_to_assembly(instruction, assembly) do
+    assembly ++ [instruction]
   end
 
   def operands(0, w_field, mode, register, rm) do
     "#{source_operand(w_field, mode, rm)}, #{destination_operand(w_field, register)}"
   end
 
-  def instruction(opcode) do
-    @opcode_map[binary_digits(opcode)]
+  def operands(1, w_field, mode, register, rm) do
+    "#{destination_operand(w_field, register)}, #{source_operand(w_field, mode, rm)}"
+  end
+
+  def operands(w_field, register, data) do
+    "#{destination_operand(w_field, register)}, #{data}"
+  end
+
+  def destination_operand(0, register) do
+    @byte_registers[binary_digits(register)]
   end
 
   def destination_operand(1, register) do
     @word_registers[binary_digits(register)]
+  end
+
+  def source_operand(0, 3, rm) do
+    @byte_registers[binary_digits(rm)]
   end
 
   def source_operand(1, 3, rm) do
