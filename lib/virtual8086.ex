@@ -28,29 +28,34 @@ defmodule Virtual8086 do
   def disassemble(binary_stream) do
     assembly = ["bits 16\n\n"]
 
-    do_disassemble(assembly, binary_stream)
+    do_disassemble(%{assembly: assembly, remaining_binary: binary_stream})
     |> Enum.join()
   end
 
-  def do_disassemble(assembly, <<>>), do: assembly
-  def do_disassemble(assembly, binary_stream) do
-    <<instruction::16, rest::binary>> = binary_stream
+  def do_disassemble(%{assembly: assembly, remaining_binary: <<>>}), do: assembly
+  def do_disassemble(%{assembly: assembly, remaining_binary: binary_stream}) do
+    <<opcode::8, rest::binary>> = binary_stream
 
-    decode(<<instruction::16>>)
+    decode(<<opcode::8>>, <<rest::binary>>)
     |> append_to_assembly(assembly)
-    |> do_disassemble(rest)
+    |> do_disassemble()
   end
 
-  def decode(<<34::6, d_field::1, w_field::1, mode::2, register::3, rm::3>>) do
-    "mov #{operands(d_field, w_field, mode, register, rm)}\n"
+  def decode(<<34::6, d_field::1, w_field::1>>, <<mode::2, register::3, rm::3, rest::binary>>) do
+    %{assembly: "mov #{operands(d_field, w_field, mode, register, rm)}\n", remaining_binary: rest}
   end
 
-  def decode(<<11::4, w_field::1, register::3, data::8>>) do
-    "mov #{operands(w_field, register, data)}\n"
+  def decode(<<11::4, 0::1, register::3>>, <<data::8, rest::binary>>) do
+    %{assembly: "mov #{operands(0, register, data)}\n", remaining_binary: rest}
+  end
+
+  def decode(<<11::4, 1::1, register::3>>, <<data_lo::8, data_hi::8, rest::binary>>) do
+    <<data::16>> = <<data_hi::8, data_lo::8>>
+    %{assembly: "mov #{operands(1, register, data)}\n", remaining_binary: rest}
   end
 
   def append_to_assembly(instruction, assembly) do
-    assembly ++ [instruction]
+    %{assembly: assembly ++ [instruction[:assembly]], remaining_binary: instruction[:remaining_binary]}
   end
 
   def operands(0, w_field, mode, register, rm) do
