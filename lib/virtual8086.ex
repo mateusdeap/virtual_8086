@@ -25,6 +25,27 @@ defmodule Virtual8086 do
     111 => "di",
   }
 
+  @effective_addresses_memory_mode_no_displacement %{
+    000 =>"[bx + si]",
+    001 =>"[bx + di]",
+    010 =>"[bp + si]",
+    011 =>"[bp + di]",
+    100 =>"[si]",
+    101 =>"[di]",
+    111 =>"[bx]",
+  }
+
+  @effective_addresses_memory_mode_8_bit_displacement %{
+    000 =>"bx + si",
+    001 =>"bx + di",
+    010 =>"bp + si",
+    011 =>"bp + si",
+    100 =>"si",
+    101 =>"di",
+    110 =>"bp",
+    111 =>"bx",
+  }
+
   def disassemble(binary_stream) do
     assembly = ["bits 16\n\n"]
 
@@ -39,6 +60,10 @@ defmodule Virtual8086 do
     decode(<<opcode::8>>, <<rest::binary>>)
     |> append_to_assembly(assembly)
     |> do_disassemble()
+  end
+
+  def decode(<<0b100010::6, d_field::1, w_field::1>>, <<0b1::2, register::3, rm::3, disp_lo::8, rest::binary>>) do
+    %{assembly: "mov #{operands(d_field, w_field, 0b1, register, rm, disp_lo)}\n", remaining_binary: rest}
   end
 
   def decode(<<0b100010::6, d_field::1, w_field::1>>, <<mode::2, register::3, rm::3, rest::binary>>) do
@@ -66,6 +91,10 @@ defmodule Virtual8086 do
     "#{destination_operand(w_field, register)}, #{source_operand(w_field, mode, rm)}"
   end
 
+  def operands(0b1, w_field, mode, register, rm, displacement) do
+    "#{destination_operand(w_field, register)}, #{source_operand(w_field, mode, rm, displacement)}"
+  end
+
   def operands(w_field, register, data) do
     "#{destination_operand(w_field, register)}, #{data}"
   end
@@ -86,9 +115,21 @@ defmodule Virtual8086 do
     @word_registers[binary_digits(rm)]
   end
 
+  def source_operand(_w_field, 0b0, rm) do
+    @effective_addresses_memory_mode_no_displacement[binary_digits(rm)]
+  end
+
+  def source_operand(_w_field, 0b1, rm, displacement) do
+    effective_addresses_with_8_bit_displacement(rm, displacement)
+  end
+
   def binary_digits(binary_string) do
     binary_string
     |> Integer.digits(2)
     |> Integer.undigits()
+  end
+
+  defp effective_addresses_with_8_bit_displacement(rm, displacement) do
+    "[#{@effective_addresses_memory_mode_8_bit_displacement[binary_digits(rm)]} + #{displacement}]"
   end
 end
