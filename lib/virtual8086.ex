@@ -46,6 +46,8 @@ defmodule Virtual8086 do
     111 =>"bx",
   }
 
+  @mov Instructions.Mov
+
   def disassemble(binary_stream) do
     assembly = ["bits 16\n\n"]
 
@@ -53,83 +55,29 @@ defmodule Virtual8086 do
     |> Enum.join()
   end
 
-  def do_disassemble(%{assembly: assembly, remaining_binary: <<>>}), do: assembly
-  def do_disassemble(%{assembly: assembly, remaining_binary: binary_stream}) do
-    <<opcode::8, rest::binary>> = binary_stream
+  defp do_disassemble(%{assembly: assembly, remaining_binary: <<>>}), do: assembly
+  defp do_disassemble(%{assembly: assembly, remaining_binary: binary_stream}) do
+    {instruction, binary} = parse_instruction(binary_stream)
 
-    decode(<<opcode::8>>, <<rest::binary>>)
+    instruction.decode(binary)
     |> append_to_assembly(assembly)
     |> do_disassemble()
   end
 
-  def decode(<<0b100010::6, d_field::1, w_field::1>>, <<0b1::2, register::3, rm::3, disp_lo::8, rest::binary>>) do
-    %{assembly: "mov #{operands(d_field, w_field, 0b1, register, rm, disp_lo)}\n", remaining_binary: rest}
+  # Register to Register Mov
+  defp parse_instruction(<<0b100010::6, rest::bits>>) do
+    {@mov, rest}
   end
 
-  def decode(<<0b100010::6, d_field::1, w_field::1>>, <<mode::2, register::3, rm::3, rest::binary>>) do
-    %{assembly: "mov #{operands(d_field, w_field, mode, register, rm)}\n", remaining_binary: rest}
-  end
-
-  def decode(<<0b1011::4, 0b0::1, register::3>>, <<data::8, rest::binary>>) do
-    %{assembly: "mov #{operands(0, register, data)}\n", remaining_binary: rest}
-  end
-
-  def decode(<<0b1011::4, 0b1::1, register::3>>, <<data_lo::8, data_hi::8, rest::binary>>) do
-    <<data::16>> = <<data_hi::8, data_lo::8>>
-    %{assembly: "mov #{operands(0b1, register, data)}\n", remaining_binary: rest}
-  end
-
-  def append_to_assembly(instruction, assembly) do
+  defp append_to_assembly(instruction, assembly) do
     %{assembly: assembly ++ [instruction[:assembly]], remaining_binary: instruction[:remaining_binary]}
   end
 
-  def operands(0b0, w_field, mode, register, rm) do
-    "#{source_operand(w_field, mode, rm)}, #{destination_operand(w_field, register)}"
-  end
+  def byte_registers, do: @byte_registers
 
-  def operands(0b1, w_field, mode, register, rm) do
-    "#{destination_operand(w_field, register)}, #{source_operand(w_field, mode, rm)}"
-  end
+  def word_registers, do: @word_registers
 
-  def operands(0b1, w_field, mode, register, rm, displacement) do
-    "#{destination_operand(w_field, register)}, #{source_operand(w_field, mode, rm, displacement)}"
-  end
+  def effective_addresses_memory_mode_no_displacement, do: @effective_addresses_memory_mode_no_displacement
 
-  def operands(w_field, register, data) do
-    "#{destination_operand(w_field, register)}, #{data}"
-  end
-
-  def destination_operand(0b0, register) do
-    @byte_registers[binary_digits(register)]
-  end
-
-  def destination_operand(0b1, register) do
-    @word_registers[binary_digits(register)]
-  end
-
-  def source_operand(0b0, 0b011, rm) do
-    @byte_registers[binary_digits(rm)]
-  end
-
-  def source_operand(0b1, 0b011, rm) do
-    @word_registers[binary_digits(rm)]
-  end
-
-  def source_operand(_w_field, 0b0, rm) do
-    @effective_addresses_memory_mode_no_displacement[binary_digits(rm)]
-  end
-
-  def source_operand(_w_field, 0b1, rm, displacement) do
-    effective_addresses_with_8_bit_displacement(rm, displacement)
-  end
-
-  def binary_digits(binary_string) do
-    binary_string
-    |> Integer.digits(2)
-    |> Integer.undigits()
-  end
-
-  defp effective_addresses_with_8_bit_displacement(rm, displacement) do
-    "[#{@effective_addresses_memory_mode_8_bit_displacement[binary_digits(rm)]} + #{displacement}]"
-  end
+  def effective_addresses_memory_mode_8_bit_displacement, do: @effective_addresses_memory_mode_8_bit_displacement
 end
