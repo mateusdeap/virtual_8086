@@ -46,7 +46,9 @@ defmodule Virtual8086 do
     111 =>"bx",
   }
 
-  @mov Instructions.Mov
+  @mov_register_to_register Instructions.Mov.RegisterToRegister
+  @mov_immediate_to_register Instructions.Mov.ImmediateToRegister
+  @mov_memory_to_from_register Instructions.Mov.MemoryToFromRegister
 
   def disassemble(binary_stream) do
     assembly = ["bits 16\n\n"]
@@ -65,8 +67,19 @@ defmodule Virtual8086 do
   end
 
   # Register to Register Mov
+  defp parse_instruction(<<0b100010::6, d_and_w_fields::2, 0b011::2, rest::bits>>) do
+    <<binary::bits>> = <<d_and_w_fields::2, 0b011::2, rest::bits>>
+    {@mov_register_to_register, binary}
+  end
+
+  # Memory To/From Register Mov
   defp parse_instruction(<<0b100010::6, rest::bits>>) do
-    {@mov, rest}
+    {@mov_memory_to_from_register, rest}
+  end
+
+  # Immediate to Register Mov
+  defp parse_instruction(<<0b1011::4, rest::bits>>) do
+    {@mov_immediate_to_register, rest}
   end
 
   defp append_to_assembly(instruction, assembly) do
