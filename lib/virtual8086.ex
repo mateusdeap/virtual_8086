@@ -11,7 +11,7 @@ defmodule Virtual8086 do
     100 => "ah",
     101 => "ch",
     110 => "dh",
-    111 => "bh",
+    111 => "bh"
   }
 
   @word_registers %{
@@ -22,28 +22,28 @@ defmodule Virtual8086 do
     100 => "sp",
     101 => "bp",
     110 => "si",
-    111 => "di",
+    111 => "di"
   }
 
   @effective_addresses_memory_mode_no_displacement %{
-    000 =>"[bx + si]",
-    001 =>"[bx + di]",
-    010 =>"[bp + si]",
-    011 =>"[bp + di]",
-    100 =>"[si]",
-    101 =>"[di]",
-    111 =>"[bx]",
+    000 => "[bx + si]",
+    001 => "[bx + di]",
+    010 => "[bp + si]",
+    011 => "[bp + di]",
+    100 => "[si]",
+    101 => "[di]",
+    111 => "[bx]"
   }
 
-  @effective_addresses_memory_mode_8_bit_displacement %{
-    000 =>"bx + si",
-    001 =>"bx + di",
-    010 =>"bp + si",
-    011 =>"bp + si",
-    100 =>"si",
-    101 =>"di",
-    110 =>"bp",
-    111 =>"bx",
+  @effective_addresses_memory_mode_with_displacement %{
+    000 => "bx + si",
+    001 => "bx + di",
+    010 => "bp + si",
+    011 => "bp + si",
+    100 => "si",
+    101 => "di",
+    110 => "bp",
+    111 => "bx"
   }
 
   @mov_register_to_register Instructions.Mov.RegisterToRegister
@@ -58,6 +58,7 @@ defmodule Virtual8086 do
   end
 
   defp do_disassemble(%{assembly: assembly, remaining_binary: <<>>}), do: assembly
+
   defp do_disassemble(%{assembly: assembly, remaining_binary: binary_stream}) do
     {instruction, binary} = parse_instruction(binary_stream)
 
@@ -83,14 +84,19 @@ defmodule Virtual8086 do
   end
 
   defp append_to_assembly(instruction, assembly) do
-    %{assembly: assembly ++ [instruction[:assembly]], remaining_binary: instruction[:remaining_binary]}
+    %{
+      assembly: assembly ++ [instruction[:assembly]],
+      remaining_binary: instruction[:remaining_binary]
+    }
   end
 
   def byte_registers, do: @byte_registers
 
   def word_registers, do: @word_registers
 
-  def effective_addresses_memory_mode_no_displacement, do: @effective_addresses_memory_mode_no_displacement
+  def effective_addresses_memory_mode_no_displacement,
+    do: @effective_addresses_memory_mode_no_displacement
 
-  def effective_addresses_memory_mode_8_bit_displacement, do: @effective_addresses_memory_mode_8_bit_displacement
+  def effective_addresses_memory_mode_with_displacement,
+    do: @effective_addresses_memory_mode_with_displacement
 end

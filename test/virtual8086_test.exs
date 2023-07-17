@@ -4,9 +4,10 @@ defmodule Virtual8086Test do
 
   test "dissassembles single register mov" do
     reference_binary = File.read!("test/single_register_mov")
-    
-    test_binary = Virtual8086.disassemble(reference_binary)
-                  |> recompile()
+
+    test_binary =
+      Virtual8086.disassemble(reference_binary)
+      |> recompile()
 
     assert test_binary == reference_binary
 
@@ -15,9 +16,10 @@ defmodule Virtual8086Test do
 
   test "dissassembles many register mov" do
     reference_binary = File.read!("test/many_register_mov")
-    
-    test_binary = Virtual8086.disassemble(reference_binary)
-                  |> recompile()
+
+    test_binary =
+      Virtual8086.disassemble(reference_binary)
+      |> recompile()
 
     assert test_binary == reference_binary
 
@@ -27,8 +29,9 @@ defmodule Virtual8086Test do
   test "dissassembles 8 bit immediate to register mov" do
     reference_binary = File.read!("test/8_bit_immediate_to_register")
 
-    test_binary = Virtual8086.disassemble(reference_binary)
-                  |> recompile()
+    test_binary =
+      Virtual8086.disassemble(reference_binary)
+      |> recompile()
 
     assert test_binary == reference_binary
 
@@ -37,9 +40,10 @@ defmodule Virtual8086Test do
 
   test "dissassembles 16 bit immediate to register mov" do
     reference_binary = File.read!("test/16_bit_immediate_to_register")
-    
-    test_binary = Virtual8086.disassemble(reference_binary)
-                  |> recompile()
+
+    test_binary =
+      Virtual8086.disassemble(reference_binary)
+      |> recompile()
 
     assert test_binary == reference_binary
 
@@ -48,9 +52,22 @@ defmodule Virtual8086Test do
 
   test "dissassembles movs with source address calculation" do
     reference_binary = File.read!("test/source_address_calculation")
-    
-    test_binary = Virtual8086.disassemble(reference_binary)
-                  |> recompile()
+
+    test_binary =
+      Virtual8086.disassemble(reference_binary)
+      |> recompile()
+
+    assert test_binary == reference_binary
+
+    clean_up()
+  end
+
+  test "dissassembles movs with destination address calculation" do
+    reference_binary = File.read!("test/dest_address_calculation")
+
+    test_binary =
+      Virtual8086.disassemble(reference_binary)
+      |> recompile()
 
     assert test_binary == reference_binary
 
